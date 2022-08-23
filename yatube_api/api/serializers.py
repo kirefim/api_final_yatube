@@ -1,16 +1,31 @@
-from rest_framework import serializers
-from rest_framework.relations import SlugRelatedField
+from rest_framework import serializers, validators
 
 
-from posts.models import Comment, Post
+from posts.models import Follow, Comment, Group, Post, User
 
 
-class PostSerializer(serializers.ModelSerializer):
-    author = SlugRelatedField(slug_field='username', read_only=True)
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
+        fields = '__all__'
+
+
+class PostSerializer (serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='username',
+        default=serializers.CurrentUserDefault())
 
     class Meta:
-        fields = '__all__'
         model = Post
+        fields = '__all__'
+        validators = [
+            validators.UniqueTogetherValidator(
+                queryset=Post.objects.all(),
+                fields=('text', 'author'),
+                message='Такой пост уже существует!'
+            )
+        ]
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -21,3 +36,30 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         fields = '__all__'
         model = Comment
+
+
+class FollowSerializer(serializers.ModelSerializer):
+    user = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='username',
+        default=serializers.CurrentUserDefault())
+    following = serializers.SlugRelatedField(
+        queryset=User.objects.all(), slug_field='username'
+    )
+
+    class Meta:
+        exclude = ('id',)
+        model = Follow
+        validators = [
+            validators.UniqueTogetherValidator(
+                queryset=Follow.objects.all(),
+                fields=('user', 'following'),
+                message='Такая подписка уже существует!'
+            )
+        ]
+
+    def validate_following(self, value):
+        if value == self.context['request'].user:
+            raise serializers.ValidationError(
+                'Нельзя подписаться на самого себя!')
+        return value
