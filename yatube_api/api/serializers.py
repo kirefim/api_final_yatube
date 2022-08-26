@@ -1,6 +1,5 @@
 from rest_framework import serializers, validators
 
-
 from posts.models import Follow, Comment, Group, Post, User
 
 
@@ -13,19 +12,11 @@ class GroupSerializer(serializers.ModelSerializer):
 class PostSerializer (serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
         read_only=True,
-        slug_field='username',
-        default=serializers.CurrentUserDefault())
+        slug_field='username',)
 
     class Meta:
         model = Post
         fields = '__all__'
-        validators = [
-            validators.UniqueTogetherValidator(
-                queryset=Post.objects.all(),
-                fields=('text', 'author'),
-                message='Такой пост уже существует!'
-            )
-        ]
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -34,6 +25,7 @@ class CommentSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
+        read_only_fields = ('post',)
         fields = '__all__'
         model = Comment
 

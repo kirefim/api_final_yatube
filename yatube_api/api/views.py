@@ -1,11 +1,11 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, mixins, pagination, viewsets
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated
 
-from .permissions import IsAuthorPermission
+from .permissions import IsAuthorOrReadOnly
 from .serializers import (CommentSerializer, FollowSerializer,
                           GroupSerializer, PostSerializer)
-from posts.models import Group, Post, Follow
+from posts.models import Group, Post
 
 
 class PostViewSet(viewsets.ModelViewSet):
@@ -15,7 +15,7 @@ class PostViewSet(viewsets.ModelViewSet):
     '''
     queryset = Post.objects.select_related('author', 'group',)
     serializer_class = PostSerializer
-    permission_classes = (IsAuthorPermission,)
+    permission_classes = (IsAuthorOrReadOnly,)
     pagination_class = pagination.LimitOffsetPagination
 
     def perform_create(self, serializer):
@@ -29,7 +29,6 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     '''
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly,)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -39,7 +38,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     Поддерживаемые HTTP-методы: GET/POST/PUT/PATCH/DELETE.
     '''
     serializer_class = CommentSerializer
-    permission_classes = (IsAuthorPermission,)
+    permission_classes = (IsAuthorOrReadOnly,)
 
     def get_post(self):
         return get_object_or_404(Post, pk=self.kwargs.get("post_id"))
@@ -59,12 +58,12 @@ class FollowViewSet(mixins.CreateModelMixin,
     Поддерживаемые HTTP-методы: GET/POST.
     '''
     serializer_class = FollowSerializer
+    permission_classes = (IsAuthenticated,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('following__username',)
 
     def get_queryset(self):
-        return (Follow.objects.filter(user=self.request.user)
-                .select_related('following'))
+        return (self.request.user.follower)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user,)

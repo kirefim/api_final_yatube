@@ -26,12 +26,7 @@ class Post(models.Model):
     )
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['text', 'author'],
-                name='unique_text_author'
-            )
-        ]
+        ordering = ('pub_date',)
 
     def __str__(self):
         return self.text
@@ -58,5 +53,9 @@ class Follow(models.Model):
             models.UniqueConstraint(
                 fields=['user', 'following'],
                 name='unique_user_following'
-            )
+            ),
+            models.CheckConstraint(
+                check=~models.Q(user=models.F('following')),
+                name='%(class)s_prevent_self_follow',
+            ),
         ]
